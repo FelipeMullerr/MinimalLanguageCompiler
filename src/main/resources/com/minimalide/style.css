@@ -1,0 +1,157 @@
+* {
+    -fx-font-family: "JetBrains Mono NL", monospace;
+    -fx-font-size: 14px;
+}
+
+.root-pane {
+    -fx-background-color: #0e0e0e;
+}
+
+.toolbar {
+    -fx-background-color: #111111;
+    -fx-border-color: #1a1a1a;
+    -fx-border-width: 0 0 1 0;
+    -fx-min-height: 38px;
+    -fx-max-height: 38px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 14 0 14;
+}
+
+.compile-btn {
+    -fx-background-color: #424242;
+    -fx-text-fill: #ffffff;
+    -fx-padding: 5 16 5 16;
+    -fx-background-radius: 2;
+    -fx-cursor: hand;
+}
+
+.compile-btn:hover {
+    -fx-background-color: #262626;
+}
+
+.editor-pane {
+    -fx-background-color: #0e0e0e;
+}
+
+.line-numbers {
+    -fx-background-color: #0e0e0e;
+    -fx-control-inner-background: #0e0e0e;
+    -fx-text-fill: #2e2e2e;
+    -fx-border-color: #181818;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 0;
+    -fx-width: 150px;
+}
+
+.line-numbers .scroll-bar:vertical {
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+    -fx-opacity: 0;
+}
+
+.line-numbers .scroll-bar:horizontal {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+}
+
+.line-numbers .content {
+    -fx-background-color: #0e0e0e;
+}
+
+.code-area {
+    -fx-background-color: #0e0e0e;
+    -fx-control-inner-background: #0e0e0e;
+    -fx-text-fill: #d4d4d4;
+    -fx-highlight-fill: #264f78;
+    -fx-highlight-text-fill: #ffffff;
+    -fx-border-color: transparent;
+}
+
+.code-area .content {
+    -fx-background-color: #0e0e0e;
+}
+
+.output-pane {
+    -fx-background-color: #090909;
+    -fx-border-color: #181818;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 10 14 12 14;
+}
+
+.output-label {
+    -fx-text-fill: #2e2e2e;
+}
+
+.output-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2e2e2e;
+    -fx-border-color: #1e1e1e;
+    -fx-border-radius: 2;
+    -fx-background-radius: 2;
+    -fx-padding: 1 7 1 7;
+    -fx-cursor: hand;
+}
+
+.output-toggle:hover {
+    -fx-text-fill: #666666;
+    -fx-border-color: #333333;
+}
+
+.output-area {
+    -fx-background-color: #090909;
+    -fx-control-inner-background: #090909;
+    -fx-text-fill: #9cdcfe;
+    -fx-font-size: 13px;
+    -fx-border-color: transparent;
+}
+
+.output-area .content {
+    -fx-background-color: #090909;
+}
+
+.output-header {
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 8 0;
+}
+
+.text-area .scroll-pane {
+    -fx-background-color: transparent;
+
+}
+
+.text-area .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.text-area .scroll-pane .corner {
+    -fx-background-color: #0e0e0e;
+}
+
+.scroll-bar {
+    -fx-background-color: #111111;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #2a2a2a;
+    -fx-background-radius: 2;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #3a3a3a;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: #111111;
+    -fx-padding: 2;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: #333333;
+}
+
+.root {
+    -fx-background-color: #0e0e0e;
+}
