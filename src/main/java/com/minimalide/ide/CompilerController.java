@@ -1,6 +1,5 @@
 package com.minimalide.ide;
 
-
 import com.minimalide.gals.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -13,7 +12,6 @@ public class CompilerController {
     private boolean outputVisible = true;
 
     public VBox buildLayout(Stage stage) {
-
         // Barra Botoes
         Region toolBarSpacer = new Region();
         HBox.setHgrow(toolBarSpacer, Priority.ALWAYS);
@@ -22,13 +20,21 @@ public class CompilerController {
         compileBtn.getStyleClass().add("compile-btn");
         compileBtn.setOnAction(e -> compile());
 
-        HBox toolbar = new HBox(toolBarSpacer,compileBtn);
+        HBox toolbar = new HBox(toolBarSpacer, compileBtn);
         toolbar.getStyleClass().add("toolbar");
 
         // Campo Input
         inputArea = new TextArea();
         inputArea.getStyleClass().add("code-area");
         VBox.setVgrow(inputArea, Priority.ALWAYS);
+
+        inputArea.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.TAB) {
+                int caretPos = inputArea.getCaretPosition();
+                inputArea.insertText(caretPos, "  ");
+                e.consume();
+            }
+        });
 
         TextArea lineNumbers = new TextArea("1");
         lineNumbers.setEditable(false);
@@ -38,18 +44,23 @@ public class CompilerController {
         lineNumbers.setMaxWidth(52);
         lineNumbers.getStyleClass().add("line-numbers");
 
-        inputArea.textProperty().addListener((obs, oldVal, newVal) -> {
-            int lines = newVal.split("\n", -1).length;
-            StringBuilder sb = new StringBuilder();
-            for (int i = 1; i <= lines; i++) {
-                sb.append(i);
-                if (i < lines) sb.append("\n");
-            }
-            lineNumbers.setText(sb.toString());
-        });
+        inputArea
+            .textProperty()
+            .addListener((obs, oldVal, newVal) -> {
+                int lines = newVal.split("\n", -1).length;
+                StringBuilder sb = new StringBuilder();
+                for (int i = 1; i <= lines; i++) {
+                    sb.append(i);
+                    if (i < lines) sb.append("\n");
+                }
+                lineNumbers.setText(sb.toString());
+            });
 
-        inputArea.scrollTopProperty().addListener((obs, o, n) ->
-                lineNumbers.setScrollTop(n.doubleValue()));
+        inputArea
+            .scrollTopProperty()
+            .addListener((obs, o, n) ->
+                lineNumbers.setScrollTop(n.doubleValue())
+            );
 
         HBox editorPane = new HBox(lineNumbers, inputArea);
         editorPane.getStyleClass().add("editor-pane");
@@ -102,22 +113,24 @@ public class CompilerController {
             outputArea.setText("Nenhum código para compilar.");
             return;
         }
-        try{
+        try {
             Lexico lexico = new Lexico(source);
 
             Sintatico sintatico = new Sintatico();
             Semantico semantico = new Semantico();
 
             sintatico.parse(lexico, semantico);
+            outputArea.setStyle("-fx-text-fill: #9cdcfe;");
+            outputArea.setText("✔  Compilação concluída sem erros.\n\n");
         } catch (SyntacticError e) {
+            outputArea.setStyle("-fx-text-fill: red;");
             outputArea.setText("✘  Erro Sintatico:\n\n" + e.getMessage());
         } catch (SemanticError e) {
+            outputArea.setStyle("-fx-text-fill: red;");
             outputArea.setText("✘  Erro Semantico:\n\n" + e.getMessage());
         } catch (LexicalError e) {
+            outputArea.setStyle("-fx-text-fill: red;");
             outputArea.setText("✘  Erro Lexico:\n\n" + e.getMessage());
         }
-
-        outputArea.setText("✔  Compilação concluída sem erros.\n\n" + "   Análise léxica    → OK\n" + "   Análise sintática → OK\n" + "   Análise semântica → OK\n");
-
     }
 }
