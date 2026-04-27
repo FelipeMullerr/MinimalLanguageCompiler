@@ -120,8 +120,22 @@ public class CompilerController {
             Semantico semantico = new Semantico();
 
             sintatico.parse(lexico, semantico);
-            outputArea.setStyle("-fx-text-fill: #9cdcfe;");
-            outputArea.setText("✔  Compilação concluída sem erros.\n\n");
+
+            semantico.verificarNaoUsados();
+
+            if (semantico.getWarnings().isEmpty()) {
+                outputArea.setStyle("-fx-text-fill: #9cdcfe;");
+                outputArea.setText("✔  Compilação concluída sem erros.");
+            } else {
+                StringBuilder msg = new StringBuilder(
+                    "⚠  Compilação concluída com avisos.\n\n"
+                );
+                for (String w : semantico.getWarnings()) {
+                    msg.append("⚠ ").append(w).append("\n");
+                }
+                outputArea.setStyle("-fx-text-fill: #f1c40f;");
+                outputArea.setText(msg.toString());
+            }
         } catch (SyntacticError e) {
             outputArea.setStyle("-fx-text-fill: red;");
             outputArea.setText("✘  Erro Sintatico:\n\n" + e.getMessage());
