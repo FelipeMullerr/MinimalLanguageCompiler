@@ -160,7 +160,7 @@ public class Semantico implements Constants {
                 pilhaTipos.push(s.tipo);
                 break;
             }
-            // uso de vetor com indice em expressao, empilha o tipo dele
+            // uso de vetor em expressao, empilha o tipo dele
             case 11: {
                 Simbolo s = verificarDeclaracao(
                     token.getLexeme(),
