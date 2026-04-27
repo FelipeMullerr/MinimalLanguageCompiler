@@ -35,7 +35,7 @@ public class Semantico implements Constants {
         );
 
         switch (action) {
-            // pega o tipo (int, float...) e insere todos os ids que estavam esperando
+            // pega o tipo e insere todos os ids que estavam esperando
             case 1: {
                 tipoAtual = token.getLexeme();
                 for (int i = 0; i < nomesTemp.size(); i++) {
