@@ -18,7 +18,7 @@ public class Importador {
         int[][] tabela = null;
         try {
             File arq = new File(
-                "/Users/felipemuller/Documents/Univali/7 Semestre/Compiladores/Trabalho_Minimal_Language/MinimalLanguageCompiler/src/main/arquivo.txt"
+                "src\\main\\arquivo.txt"
             );
             List<Dado> dados = new ArrayList<>();
 
