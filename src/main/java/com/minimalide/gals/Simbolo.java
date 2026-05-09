@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Simbolo {
-
+    public List<String> tiposParametros = new ArrayList<>();
     public enum Categoria {
         VARIAVEL,
         VETOR,

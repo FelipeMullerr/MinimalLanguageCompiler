@@ -1,6 +1,9 @@
 package com.minimalide.ide;
 
 import com.minimalide.gals.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -10,17 +13,27 @@ public class CompilerController {
     private TextArea inputArea;
     private TextArea outputArea;
     private boolean outputVisible = true;
+    private Stage tabelaStage;
 
     public VBox buildLayout(Stage stage) {
         // Barra Botoes
         Region toolBarSpacer = new Region();
         HBox.setHgrow(toolBarSpacer, Priority.ALWAYS);
 
+        Button tabelaBtn = new Button("⊞  Tabela");
+        tabelaBtn.getStyleClass().add("compile-btn");
+        tabelaBtn.setOnAction(e -> {
+            if (tabelaStage != null) {
+                tabelaStage.show();
+                tabelaStage.toFront();
+            }
+        });
+
         Button compileBtn = new Button("▶  Compilar");
         compileBtn.getStyleClass().add("compile-btn");
         compileBtn.setOnAction(e -> compile());
 
-        HBox toolbar = new HBox(toolBarSpacer, compileBtn);
+        HBox toolbar = new HBox(toolBarSpacer, tabelaBtn, compileBtn);
         toolbar.getStyleClass().add("toolbar");
 
         // Campo Input
@@ -44,23 +57,19 @@ public class CompilerController {
         lineNumbers.setMaxWidth(52);
         lineNumbers.getStyleClass().add("line-numbers");
 
-        inputArea
-            .textProperty()
-            .addListener((obs, oldVal, newVal) -> {
-                int lines = newVal.split("\n", -1).length;
-                StringBuilder sb = new StringBuilder();
-                for (int i = 1; i <= lines; i++) {
-                    sb.append(i);
-                    if (i < lines) sb.append("\n");
-                }
-                lineNumbers.setText(sb.toString());
-            });
+        inputArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            int lines = newVal.split("\n", -1).length;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 1; i <= lines; i++) {
+                sb.append(i);
+                if (i < lines) sb.append("\n");
+            }
+            lineNumbers.setText(sb.toString());
+        });
 
-        inputArea
-            .scrollTopProperty()
-            .addListener((obs, o, n) ->
-                lineNumbers.setScrollTop(n.doubleValue())
-            );
+        inputArea.scrollTopProperty().addListener((obs, o, n) ->
+            lineNumbers.setScrollTop(n.doubleValue())
+        );
 
         HBox editorPane = new HBox(lineNumbers, inputArea);
         editorPane.getStyleClass().add("editor-pane");
@@ -99,6 +108,58 @@ public class CompilerController {
         return root;
     }
 
+    private void abrirTabelaSimbolos(java.util.List<Simbolo> simbolos) {
+        if (tabelaStage == null) {
+            tabelaStage = new Stage();
+            tabelaStage.setTitle("Tabela de Símbolos");
+        }
+
+        TableView<Simbolo> tabelaView = new TableView<>();
+        tabelaView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tabelaView.getStyleClass().add("symbol-table");
+
+        TableColumn<Simbolo, String> colNome = new TableColumn<>("Nome");
+        colNome.setCellValueFactory(data ->
+            new javafx.beans.property.SimpleStringProperty(data.getValue().nome));
+
+        TableColumn<Simbolo, String> colTipo = new TableColumn<>("Tipo");
+        colTipo.setCellValueFactory(data ->
+            new javafx.beans.property.SimpleStringProperty(data.getValue().tipo));
+
+        TableColumn<Simbolo, String> colCategoria = new TableColumn<>("Modalidade");
+        colCategoria.setCellValueFactory(data ->
+            new javafx.beans.property.SimpleStringProperty(data.getValue().categoria.name()));
+
+        TableColumn<Simbolo, String> colEscopo = new TableColumn<>("Escopo");
+        colEscopo.setCellValueFactory(data ->
+            new javafx.beans.property.SimpleStringProperty(String.valueOf(data.getValue().nivelEscopo)));
+
+        TableColumn<Simbolo, String> colInicializado = new TableColumn<>("Inicializado");
+        colInicializado.setCellValueFactory(data ->
+            new javafx.beans.property.SimpleStringProperty(data.getValue().inicializado ? "sim" : "nao"));
+
+        TableColumn<Simbolo, String> colUsado = new TableColumn<>("Usado");
+        colUsado.setCellValueFactory(data ->
+            new javafx.beans.property.SimpleStringProperty(data.getValue().usado ? "sim" : "nao"));
+
+        tabelaView.getColumns().addAll(colNome, colTipo, colCategoria, colEscopo, colInicializado, colUsado);
+
+        ObservableList<Simbolo> itens = FXCollections.observableArrayList(simbolos);
+        tabelaView.setItems(itens);
+
+        VBox layout = new VBox(tabelaView);
+        VBox.setVgrow(tabelaView, Priority.ALWAYS);
+
+        Scene scene = new Scene(layout, 700, 400);
+        scene.getStylesheets().add(
+            getClass().getResource("/com/minimalide/style.css").toExternalForm()
+        );
+
+        tabelaStage.setScene(scene);
+        tabelaStage.show();
+        tabelaStage.toFront();
+    }
+
     private void compile() {
         String source = inputArea.getText();
         outputArea.clear();
@@ -115,21 +176,19 @@ public class CompilerController {
         }
         try {
             Lexico lexico = new Lexico(source);
-
             Sintatico sintatico = new Sintatico();
             Semantico semantico = new Semantico();
 
             sintatico.parse(lexico, semantico);
-
             semantico.verificarNaoUsados();
+
+            abrirTabelaSimbolos(semantico.getTabelaSimbolos());
 
             if (semantico.getWarnings().isEmpty()) {
                 outputArea.setStyle("-fx-text-fill: #9cdcfe;");
                 outputArea.setText("✔  Compilação concluída sem erros.");
             } else {
-                StringBuilder msg = new StringBuilder(
-                    "⚠  Compilação concluída com avisos.\n\n"
-                );
+                StringBuilder msg = new StringBuilder("⚠  Compilação concluída com avisos.\n\n");
                 for (String w : semantico.getWarnings()) {
                     msg.append("⚠ ").append(w).append("\n");
                 }

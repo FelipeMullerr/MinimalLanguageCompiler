@@ -154,3 +154,60 @@
 .root {
     -fx-background-color: #1f2223;
 }
+
+.symbol-table {
+    -fx-background-color: #1f2223;
+    -fx-control-inner-background: #1f2223;
+    -fx-border-color: #2c2f32;
+    -fx-border-width: 1 0 0 0;
+}
+
+.symbol-table .column-header-background {
+    -fx-background-color: #2c2f32;
+}
+
+.symbol-table .column-header {
+    -fx-background-color: #2c2f32;
+    -fx-border-color: #3a3d40;
+    -fx-border-width: 0 1 0 0;
+}
+
+.symbol-table .column-header .label {
+    -fx-text-fill: #f7fdff;
+    -fx-font-size: 13px;
+}
+
+.symbol-table .table-row-cell {
+    -fx-background-color: #1f2223;
+    -fx-border-color: #2c2f32;
+    -fx-border-width: 0 0 1 0;
+    -fx-text-fill: #d4d4d4;
+}
+
+.symbol-table .table-row-cell:odd {
+    -fx-background-color: #252829;
+}
+
+.symbol-table .table-row-cell:selected {
+    -fx-background-color: #264f78;
+}
+
+.symbol-table .table-row-cell:selected .text {
+    -fx-fill: #f7fdff;
+}
+
+.symbol-table .table-cell {
+    -fx-text-fill: #d4d4d4;
+    -fx-font-size: 13px;
+    -fx-border-color: #2c2f32;
+    -fx-border-width: 0 1 0 0;
+}
+
+.symbol-table .scroll-bar {
+    -fx-background-color: #2c2f32;
+}
+
+.symbol-table .scroll-bar .thumb {
+    -fx-background-color: #424242;
+    -fx-background-radius: 2;
+}
