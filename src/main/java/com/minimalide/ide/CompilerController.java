@@ -20,7 +20,7 @@ public class CompilerController {
         Region toolBarSpacer = new Region();
         HBox.setHgrow(toolBarSpacer, Priority.ALWAYS);
 
-        Button tabelaBtn = new Button("⊞  Tabela");
+        Button tabelaBtn = new Button("□  Tabela");
         tabelaBtn.getStyleClass().add("compile-btn");
         tabelaBtn.setOnAction(e -> {
             if (tabelaStage != null) {
@@ -126,7 +126,7 @@ public class CompilerController {
         colTipo.setCellValueFactory(data ->
             new javafx.beans.property.SimpleStringProperty(data.getValue().tipo));
 
-        TableColumn<Simbolo, String> colCategoria = new TableColumn<>("Modalidade");
+        TableColumn<Simbolo, String> colCategoria = new TableColumn<>("Categoria");
         colCategoria.setCellValueFactory(data ->
             new javafx.beans.property.SimpleStringProperty(data.getValue().categoria.name()));
 

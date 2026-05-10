@@ -13,6 +13,7 @@ public class Semantico implements Constants {
     private boolean declarandoParametros = false;
     private int contadorEscopo = 0;
     private int tamanhoPilhaAntesChamada = 0;
+    private String nomeUltimaVariavel;
 
     private final List<String> nomesTemp = new ArrayList<>();
     private final List<Simbolo.Categoria> categoriasTemp = new ArrayList<>();
@@ -31,6 +32,8 @@ public class Semantico implements Constants {
     private final Stack<String> pilhaTipos = new Stack<>();
 
     private final List<String> warnings = new ArrayList<>();
+
+    private final List<String> nomesUltimaDeclaracao = new ArrayList<>();
 
     public void executeAction(int action, Token token) throws SemanticError {
         System.out.println("Ação #" + action + " | lexema: " + token.getLexeme() + " | pos: " + token.getPosition());
@@ -55,6 +58,8 @@ public class Semantico implements Constants {
                     if (funcao != null) funcao.tipo = tipoAtual;
                 }
                 declarandoParametros = false;
+                nomesUltimaDeclaracao.clear();
+                nomesUltimaDeclaracao.addAll(nomesTemp);
                 nomesTemp.clear();
                 categoriasTemp.clear();
                 posicoesTemp.clear();
@@ -120,15 +125,14 @@ public class Semantico implements Constants {
             case 8: {
                 if (!nomesUsoExpressao.isEmpty()) {
                     String ultimo = nomesUsoExpressao.get(nomesUsoExpressao.size() - 1);
-                    int ultimaPos = posicoesUsoExpressao.get(posicoesUsoExpressao.size() - 1);
-                    if (ultimo.equals(token.getLexeme()) && ultimaPos == token.getPosition()) {
+                    if (ultimo.equals(nomeUltimaVariavel)) {
                         nomesUsoExpressao.remove(nomesUsoExpressao.size() - 1);
                         posicoesUsoExpressao.remove(posicoesUsoExpressao.size() - 1);
                     }
                 }
-                nomeVariavelAtribuicao = token.getLexeme();
-                Simbolo s = verificarDeclaracao(token.getLexeme(), token.getPosition());
-                s.usado = true;
+                nomeVariavelAtribuicao = nomeUltimaVariavel;
+                Simbolo s = verificarDeclaracao(nomeUltimaVariavel, token.getPosition());
+                // s.usado = true;
                 break;
             }
             // processa o fim da atribuicao, verifica tipos e marca a variavel como inicializada
@@ -162,6 +166,7 @@ public class Semantico implements Constants {
             // nao sabemos ainda se o identificador esta no lado esquerdo ou direita de uma atribuicao
             // o case 8 remove o uso pendente se for lado esquerdo, o case 9 ou 35 processa se for lado direito
             case 10: {
+                nomeUltimaVariavel = token.getLexeme();
                 Simbolo s = verificarDeclaracao(token.getLexeme(), token.getPosition());
                 nomesUsoExpressao.add(token.getLexeme());
                 posicoesUsoExpressao.add(token.getPosition());
@@ -170,11 +175,10 @@ public class Semantico implements Constants {
             }
             // verifica o uso de um vetor com indice em expressao e empilha o tipo dele
             case 11: {
-                Simbolo s = verificarDeclaracao(token.getLexeme(), token.getPosition());
-                s.usado = true;
-                if (!s.inicializado) {
-                    warnings.add("Aviso: '" + s.nome + "' usado sem inicializacao (posicao " + token.getPosition() + ")");
-                }
+                nomeUltimaVariavel = token.getLexeme();
+                Simbolo s = verificarDeclaracao(nomeUltimaVariavel, token.getPosition());
+                nomesUsoExpressao.add(token.getLexeme());
+                posicoesUsoExpressao.add(token.getPosition());
                 pilhaTipos.push(s.tipo);
                 break;
             }
@@ -374,6 +378,7 @@ public class Semantico implements Constants {
             case 36: {
                 contadorEscopo++;
                 pilhaEscopo.push(contadorEscopo);
+                nomeFuncaoAtual = null;
                 break;
             }
             // fecha escopo, avisa variaveis declaradas e nao usadas dentro dele
@@ -432,6 +437,23 @@ public class Semantico implements Constants {
                 }
                 break;
             }
+            // fim de declaracao com inicializacao, verifica tipo e marca os identificadores como inicializados
+            case 40: {
+                int escopoAtual = pilhaEscopo.peek();
+                String tipoExpressao = pilhaTipos.isEmpty() ? null : pilhaTipos.pop();
+                for (Simbolo s : tabelaSimbolos) {
+                    if (nomesUltimaDeclaracao.contains(s.nome) && s.nivelEscopo == escopoAtual) {
+                        if (tipoExpressao != null) {
+                            nomeVariavelAtribuicao = s.nome;
+                            verificarTipoAtribuicao(s.tipo, tipoExpressao, token.getPosition());
+                        }
+                        s.inicializado = true;
+                    }
+                }
+                nomeVariavelAtribuicao = null;
+                nomesUltimaDeclaracao.clear();
+                break;
+            }
             default:
                 break;
         }
@@ -458,7 +480,7 @@ public class Semantico implements Constants {
         int escopoAtual = pilhaEscopo.peek();
         for (Simbolo s : tabelaSimbolos) {
             if (s.nome.equals(nome) && s.nivelEscopo == escopoAtual) {
-                throw new SemanticError("Identificador '" + nome + "' ja declarado neste escopo.", pos);
+                throw new SemanticError("Identificador '" + nome + "' ja declarado neste escopo (" + escopoAtual + ")", pos);
             }
         }
         Simbolo s = new Simbolo();

@@ -2,7 +2,7 @@ package com.minimalide.gals;
 
 public interface ScannerConstants
 {
-    int[] SCANNER_TABLE_INDEXES =
+    int[] SCANNER_TABLE_INDEXES = 
     {
         0,
         92,

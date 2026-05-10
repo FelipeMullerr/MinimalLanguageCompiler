@@ -20,14 +20,11 @@ public class Simbolo {
     public boolean inicializado;
     public int tamanhoVetor;
 
-    //public List<String> tiposParametros;
-
     public Simbolo() {
         this.categoria = Categoria.VARIAVEL;
         this.nivelEscopo = 0;
         this.usado = false;
         this.inicializado = false;
         this.tamanhoVetor = 0;
-        //this.tiposParametros = new ArrayList<>();
     }
 }
