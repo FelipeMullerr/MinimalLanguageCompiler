@@ -7,10 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
 
 public class CompilerController {
 
@@ -199,30 +195,6 @@ public class CompilerController {
                 outputArea.setStyle("-fx-text-fill: #f1c40f;");
                 outputArea.setText(msg.toString());
             }
-            
-            String inputText = inputArea.getText();
-            Path outputPath = Path.of("src/main/java/com/minimalide/texts/inputText.txt");
-            try {
-                Files.write(outputPath, inputText.getBytes());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            List<Simbolo> simbolos = semantico.getTabelaSimbolos();
-            Path outputTabelaSimbolosPath = Path.of("src/main/java/com/minimalide/texts/tabelaSimbolos.txt");
-
-            try {
-                StringBuilder tabelaContent = new StringBuilder();
-                for (Simbolo s : simbolos) {
-                    tabelaContent.append(String.format("%s | %s | %s | Escopo: %d | Inicializado: %s | Usado: %s\n",
-                        s.nome, s.tipo, s.categoria.name(), s.nivelEscopo,
-                        s.inicializado ? "sim" : "nao", s.usado ? "sim" : "nao"));
-                }
-                Files.write(outputTabelaSimbolosPath, tabelaContent.toString().getBytes());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
         } catch (SyntacticError e) {
             outputArea.setStyle("-fx-text-fill: red;");
             outputArea.setText("✘  Erro Sintatico:\n\n" + e.getMessage());
@@ -233,7 +205,5 @@ public class CompilerController {
             outputArea.setStyle("-fx-text-fill: red;");
             outputArea.setText("✘  Erro Lexico:\n\n" + e.getMessage());
         }
-
-
     }
 }
