@@ -14,26 +14,34 @@ public class Semantico implements Constants {
     private int contadorEscopo = 0;
     private int tamanhoPilhaAntesChamada = 0;
     private String nomeUltimaVariavel;
+    private boolean declarandoForInit = false;
+    private int tamanhoVetorTemp = 0;
+    private String nomeVetorEsquerdo = null;
+    private String operadorAtual = null;
+    private String operadorPrincipal = null;
+    private String indiceVetorProcessado = null;
+    private String nomeVetorProcessado = null;
+    private boolean indiceNoAcumulador = false;
+    private String nomeVetorAtual = null;
+    private boolean dentroIndiceVetor = false;
 
+    private GeradorCodigo gerador;
+    public void setGerador(GeradorCodigo g) { this.gerador = g; }
     private final List<String> nomesTemp = new ArrayList<>();
     private final List<Simbolo.Categoria> categoriasTemp = new ArrayList<>();
     private final List<Integer> posicoesTemp = new ArrayList<>();
-
     private final List<String> nomesUsoExpressao = new ArrayList<>();
     private final List<Integer> posicoesUsoExpressao = new ArrayList<>();
-
     private final List<String> tiposArgsAtual = new ArrayList<>();
-
     private final Stack<Integer> pilhaEscopo = new Stack<>();
     { pilhaEscopo.push(0); }
-
     private final List<Simbolo> tabelaSimbolos = new ArrayList<>();
-
     private final Stack<String> pilhaTipos = new Stack<>();
-
+    private final Stack<String> pilhaValores = new Stack<>();
     private final List<String> warnings = new ArrayList<>();
-
     private final List<String> nomesUltimaDeclaracao = new ArrayList<>();
+
+    private final Stack<String> pilhaTempsVetor = new Stack<>();
 
     public void executeAction(int action, Token token) throws SemanticError {
         System.out.println("Ação #" + action + " | lexema: " + token.getLexeme() + " | pos: " + token.getPosition());
@@ -49,6 +57,10 @@ public class Semantico implements Constants {
                         pilhaEscopo.pop();
                         Simbolo funcao = buscarSimboloGlobal(nomeFuncaoAtual);
                         if (funcao != null) funcao.tiposParametros.add(tipoAtual);
+                    } else if (declarandoForInit) {
+                        pilhaEscopo.push(contadorEscopo + 1);
+                        declararSimbolo(nomesTemp.get(i), categoriasTemp.get(i), posicoesTemp.get(i));
+                        pilhaEscopo.pop();
                     } else {
                         declararSimbolo(nomesTemp.get(i), categoriasTemp.get(i), posicoesTemp.get(i));
                     }
@@ -57,6 +69,7 @@ public class Semantico implements Constants {
                     Simbolo funcao = buscarSimboloGlobal(nomeFuncaoAtual);
                     if (funcao != null) funcao.tipo = tipoAtual;
                 }
+                declarandoForInit = false;
                 declarandoParametros = false;
                 nomesUltimaDeclaracao.clear();
                 nomesUltimaDeclaracao.addAll(nomesTemp);
@@ -123,16 +136,37 @@ public class Semantico implements Constants {
             // remove o identificador da lista de usos pois confirmamos que é o lado esquerdo da atribuicao
             // o case 10 ja tinha adicionado ele na lista, mas escrita nao e leitura entao removemos
             case 8: {
+                String nomeParaRemover = (nomeVetorEsquerdo != null) ? nomeVetorEsquerdo : nomeUltimaVariavel;
                 if (!nomesUsoExpressao.isEmpty()) {
-                    String ultimo = nomesUsoExpressao.get(nomesUsoExpressao.size() - 1);
-                    if (ultimo.equals(nomeUltimaVariavel)) {
-                        nomesUsoExpressao.remove(nomesUsoExpressao.size() - 1);
-                        posicoesUsoExpressao.remove(posicoesUsoExpressao.size() - 1);
+                    int idx = nomesUsoExpressao.lastIndexOf(nomeParaRemover);
+                    if (idx >= 0) {
+                        nomesUsoExpressao.remove(idx);
+                        posicoesUsoExpressao.remove(idx);
                     }
                 }
-                nomeVariavelAtribuicao = nomeUltimaVariavel;
-                Simbolo s = verificarDeclaracao(nomeUltimaVariavel, token.getPosition());
-                // s.usado = true;
+                if (nomeVetorEsquerdo == null && !pilhaValores.isEmpty()) {
+                    pilhaValores.pop();
+                }
+                nomeVariavelAtribuicao = nomeParaRemover;
+                verificarDeclaracao(nomeParaRemover, token.getPosition());
+
+                if (nomeVetorEsquerdo != null && gerador != null) {
+                    if (indiceNoAcumulador) {
+                        gerador.gerarText("STO " + GeradorCodigo.TEMP_ATRIB);
+                        indiceNoAcumulador = false;
+                    } else if (indiceVetorProcessado != null) {
+                        if (indiceVetorProcessado.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + indiceVetorProcessado);
+                        } else {
+                            gerador.gerarText("LD " + indiceVetorProcessado);
+                        }
+                        gerador.gerarText("STO " + GeradorCodigo.TEMP_ATRIB);
+                    }
+                    indiceVetorProcessado = null;
+                    nomeVetorProcessado = null;
+                }
+
+                nomeVetorEsquerdo = null;
                 break;
             }
             // processa o fim da atribuicao, verifica tipos e marca a variavel como inicializada
@@ -151,6 +185,7 @@ public class Semantico implements Constants {
                 nomesUsoExpressao.clear();
                 posicoesUsoExpressao.clear();
 
+                String nomeDestino = nomeVariavelAtribuicao;
                 if (nomeVariavelAtribuicao != null) {
                     Simbolo variavel = buscarSimbolo(nomeVariavelAtribuicao);
                     if (variavel != null && !pilhaTipos.isEmpty()) {
@@ -159,6 +194,131 @@ public class Semantico implements Constants {
                         variavel.inicializado = true;
                     }
                     nomeVariavelAtribuicao = null;
+                }
+
+                if (gerador != null && nomeDestino != null) {
+                    Simbolo simDestino = buscarSimbolo(nomeDestino);
+                    boolean destinoEhVetor = simDestino != null && simDestino.categoria == Simbolo.Categoria.VETOR;
+
+                    if (destinoEhVetor) {
+                        if (pilhaTempsVetor.size() >= 2) {
+                            // dois vetores com operacao entre eles
+                            String temp2 = pilhaTempsVetor.pop();
+                            String temp1 = pilhaTempsVetor.pop();
+                            gerador.gerarText("LD " + temp1);
+                            if ("-".equals(operadorPrincipal)) {
+                                gerador.gerarText("SUB " + temp2);
+                            } else {
+                                gerador.gerarText("ADD " + temp2);
+                            }
+                            gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.resetTemps();
+                            operadorPrincipal = null;
+                        } else if (!pilhaTempsVetor.isEmpty()) {
+                            // um vetor no lado direito
+                            String temp = pilhaTempsVetor.pop();
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LD " + temp);
+                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.resetTemps();
+                        } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
+                            if (indiceVetorProcessado.matches("[+-]?\\d+")) {
+                                gerador.gerarText("LDI " + indiceVetorProcessado);
+                            } else {
+                                gerador.gerarText("LD " + indiceVetorProcessado);
+                            }
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LDV " + nomeVetorProcessado);
+                            indiceVetorProcessado = null;
+                            nomeVetorProcessado = null;
+                            gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.resetTemps();
+                        } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LDV " + nomeVetorProcessado);
+                            indiceNoAcumulador = false;
+                            nomeVetorProcessado = null;
+                            gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.resetTemps();
+                        } else {
+                            // lado direito expressao simples ou aritmetica sem vetor
+                            String valor = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                            if (valor != null) {
+                                if (valor.matches("[+-]?\\d+")) {
+                                    gerador.gerarText("LDI " + valor);
+                                } else {
+                                    gerador.gerarText("LD " + valor);
+                                }
+                            }
+                            gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
+                            gerador.gerarText("STO " + GeradorCodigo.INDR);
+                            gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
+                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.resetTemps();
+                        }
+                    } else if (pilhaTempsVetor.size() >= 2) {
+                        // destino variavel, dois vetores com operacao
+                        String temp2 = pilhaTempsVetor.pop();
+                        String temp1 = pilhaTempsVetor.pop();
+                        gerador.gerarText("LD " + temp1);
+                        if ("-".equals(operadorPrincipal)) {
+                            gerador.gerarText("SUB " + temp2);
+                        } else {
+                            gerador.gerarText("ADD " + temp2);
+                        }
+                        gerador.gerarText("STO " + nomeDestino);
+                        gerador.resetTemps();
+                        operadorPrincipal = null;
+                    } else if (!pilhaTempsVetor.isEmpty()) {
+                        // destino variavel, um vetor no lado direito
+                        String temp = pilhaTempsVetor.pop();
+                        gerador.gerarText("LD " + temp);
+                        gerador.gerarText("STO " + nomeDestino);
+                        gerador.resetTemps();
+                    } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
+                        if (indiceVetorProcessado.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + indiceVetorProcessado);
+                        } else {
+                            gerador.gerarText("LD " + indiceVetorProcessado);
+                        }
+                        gerador.gerarText("STO " + GeradorCodigo.INDR);
+                        gerador.gerarText("LDV " + nomeVetorProcessado);
+                        gerador.gerarText("STO " + nomeDestino);
+                        indiceVetorProcessado = null;
+                        nomeVetorProcessado = null;
+                    } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
+                        gerador.gerarText("STO " + GeradorCodigo.INDR);
+                        gerador.gerarText("LDV " + nomeVetorProcessado);
+                        gerador.gerarText("STO " + nomeDestino);
+                        indiceNoAcumulador = false;
+                        nomeVetorProcessado = null;
+                    } else {
+                        if (pilhaValores.isEmpty()) {
+                            gerador.gerarText("STO " + nomeDestino);
+                        } else {
+                            String valor = pilhaValores.pop();
+                            if (valor.matches("[+-]?\\d+")) {
+                                gerador.gerarText("LDI " + valor);
+                            } else {
+                                gerador.gerarText("LD " + valor);
+                            }
+                            gerador.gerarText("STO " + nomeDestino);
+                        }
+                    }
                 }
                 break;
             }
@@ -171,11 +331,19 @@ public class Semantico implements Constants {
                 nomesUsoExpressao.add(token.getLexeme());
                 posicoesUsoExpressao.add(token.getPosition());
                 pilhaTipos.push(s.tipo);
+                pilhaValores.push(token.getLexeme());
                 break;
             }
             // verifica o uso de um vetor com indice em expressao e empilha o tipo dele
             case 11: {
+                dentroIndiceVetor = true;
+                if (nomeVariavelAtribuicao == null) {
+                    nomeVetorEsquerdo = token.getLexeme();
+                } else {
+                    nomeVetorEsquerdo = null;
+                }
                 nomeUltimaVariavel = token.getLexeme();
+                nomeVetorAtual = token.getLexeme();
                 Simbolo s = verificarDeclaracao(nomeUltimaVariavel, token.getPosition());
                 nomesUsoExpressao.add(token.getLexeme());
                 posicoesUsoExpressao.add(token.getPosition());
@@ -196,6 +364,7 @@ public class Semantico implements Constants {
             // empilha o tipo do literal encontrado na expressao
             case 13: {
                 pilhaTipos.push("int");
+                pilhaValores.push(token.getLexeme());
                 break;
             }
             case 14: {
@@ -219,6 +388,28 @@ public class Semantico implements Constants {
                 String tipoOp2 = pilhaTipos.pop();
                 String tipoOp1 = pilhaTipos.pop();
                 pilhaTipos.push(verificarTipoExpressao(tipoOp1, tipoOp2, TabelaSemantica.SUM, token));
+
+                if (gerador != null) {
+                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+
+                    if (op1 != null) {
+                        if (op1.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + op1);
+                        } else {
+                            gerador.gerarText("LD " + op1);
+                        }
+                    }
+                    if (op2 != null) {
+                        boolean literal = op2.matches("[+-]?\\d+");
+                        if ("+".equals(operadorAtual)) {
+                            gerador.gerarText(literal ? "ADDI " + op2 : "ADD " + op2);
+                        } else {
+                            gerador.gerarText(literal ? "SUBI " + op2 : "SUB " + op2);
+                        }
+                    }
+                    operadorAtual = null;
+                }
                 break;
             }
             // verifica compatibilidade dos operandos para * / % e empilha o tipo resultante
@@ -275,6 +466,7 @@ public class Semantico implements Constants {
             }
             // variavel de controle do for, guarda pra inserir quando o tipo chegar
             case 25: {
+                declarandoForInit = true;
                 nomesTemp.add(token.getLexeme());
                 categoriasTemp.add(Simbolo.Categoria.VARIAVEL);
                 posicoesTemp.add(token.getPosition());
@@ -293,6 +485,20 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores bit a bit requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
+
+                if(gerador != null) {
+                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    if (op1 != null) {
+                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
+                        else gerador.gerarText("LD " + op1);
+                    }
+                    if (op2 != null) {
+                        boolean literal = op2.matches("[+-]?\\d+");
+                        gerador.gerarText(literal ? "ORI " + op2 : "OR " + op2);
+                    }
+                    operadorAtual = null;
+                }
                 break;
             }
             // verifica se os dois operandos do shifts sao int e empilha int
@@ -303,6 +509,22 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores de shift requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
+                if (gerador != null) {
+                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    if (op1 != null) {
+                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
+                        else gerador.gerarText("LD " + op1);
+                    }
+                    if (op2 != null) {
+                        if ("<<".equals(operadorAtual)) {
+                            gerador.gerarText("SLL " + op2);
+                        } else {
+                            gerador.gerarText("SRL " + op2);
+                        }
+                    }
+                    operadorAtual = null;
+                }
                 break;
             }
             // verifica se o operando do NOT bit a bit e int e empilha int
@@ -312,16 +534,57 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operador '~' requer operando int, encontrado: " + tipoOperando,token.getPosition());
                 }
                 pilhaTipos.push("int");
+                if (gerador != null) {
+                    // como NOT usa apenas um operador, o valor ja esta na pilha de valores
+                    if (!pilhaValores.isEmpty()) {
+                        String op = pilhaValores.pop();
+                        if (op.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op);
+                        else gerador.gerarText("LD " + op);
+                    }
+                    gerador.gerarText("NOT");
+                }
                 break;
             }
             // entrou no in, limpa a lista pra coletar as variaveis
             case 31: {
                 nomesUsoExpressao.clear();
                 posicoesUsoExpressao.clear();
+                pilhaValores.clear();
                 break;
             }
             // fim do in, marca todas as variaveis encontradas como inicializadas e usadas
             case 32: {
+                if (gerador != null) {
+                    if (indiceVetorProcessado != null && nomeVetorAtual != null) {
+                        gerador.gerarText("LD $in_port");
+                        gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                        if (indiceVetorProcessado.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + indiceVetorProcessado);
+                        } else {
+                            gerador.gerarText("LD " + indiceVetorProcessado);
+                        }
+                        gerador.gerarText("STO " + GeradorCodigo.INDR);
+                        gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
+                        gerador.gerarText("STOV " + nomeVetorAtual);
+                        indiceVetorProcessado = null;
+                        nomeVetorProcessado = null;
+                    } else if (indiceNoAcumulador && nomeVetorAtual != null) {
+                        gerador.gerarText("LD $in_port");
+                        gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                        gerador.gerarText("STO " + GeradorCodigo.INDR);
+                        gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
+                        gerador.gerarText("STOV " + nomeVetorAtual);
+                        indiceNoAcumulador = false;
+                    } else {
+                        for (String nome : nomesUsoExpressao) {
+                            Simbolo s = buscarSimbolo(nome);
+                            if (s != null && s.categoria != Simbolo.Categoria.VETOR) {
+                                gerador.gerarText("LD $in_port");
+                                gerador.gerarText("STO " + nome);
+                            }
+                        }
+                    }
+                }
                 for (String nome : nomesUsoExpressao) {
                     Simbolo s = buscarSimbolo(nome);
                     if (s != null) {
@@ -331,6 +594,7 @@ public class Semantico implements Constants {
                 }
                 nomesUsoExpressao.clear();
                 posicoesUsoExpressao.clear();
+                pilhaValores.clear();
                 break;
             }
             // verifica se os dois operandos do XOR bit a bit sao int e empilha int
@@ -341,6 +605,20 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores bit a bit requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
+
+                if (gerador != null) {
+                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    if (op1 != null) {
+                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
+                        else gerador.gerarText("LD " + op1);
+                    }
+                    if (op2 != null) {
+                        boolean literal = op2.matches("[+-]?\\d+");
+                        gerador.gerarText(literal ? "XORI " + op2 : "XOR " + op2);
+                    }
+                    operadorAtual = null;
+                }
                 break;
             }
             // operacao AND bit a bit, os dois lados tem que ser int
@@ -351,6 +629,19 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores bit a bit requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
+                if (gerador != null) {
+                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                    if (op1 != null) {
+                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
+                        else gerador.gerarText("LD " + op1);
+                    }
+                    if (op2 != null) {
+                        boolean literal = op2.matches("[+-]?\\d+");
+                        gerador.gerarText(literal ? "ANDI " + op2 : "AND " + op2);
+                    }
+                    operadorAtual = null;
+                }
                 break;
             }
             // processa todos os usos de uma expressao que nao é atribuicao, no caso ususo como if, while, out, return, etc
@@ -441,17 +732,109 @@ public class Semantico implements Constants {
             case 40: {
                 int escopoAtual = pilhaEscopo.peek();
                 String tipoExpressao = pilhaTipos.isEmpty() ? null : pilhaTipos.pop();
+                String valorExpressao = pilhaValores.isEmpty() ? null : pilhaValores.pop();
                 for (Simbolo s : tabelaSimbolos) {
-                    if (nomesUltimaDeclaracao.contains(s.nome) && s.nivelEscopo == escopoAtual) {
+                    if (nomesUltimaDeclaracao.contains(s.nome) &&
+                        (s.nivelEscopo == escopoAtual || s.nivelEscopo == contadorEscopo + 1)) {
                         if (tipoExpressao != null) {
                             nomeVariavelAtribuicao = s.nome;
                             verificarTipoAtribuicao(s.tipo, tipoExpressao, token.getPosition());
+                        }
+                        if (gerador != null && valorExpressao != null) {
+                            if (valorExpressao.matches("[+-]?\\d+")) {
+                                gerador.gerarText("LDI " + valorExpressao);
+                            } else {
+                                gerador.gerarText("LD " + valorExpressao);
+                            }
+                            gerador.gerarText("STO " + s.nome);
                         }
                         s.inicializado = true;
                     }
                 }
                 nomeVariavelAtribuicao = null;
                 nomesUltimaDeclaracao.clear();
+                break;
+            }
+            case 41: {
+                tamanhoVetorTemp = Integer.parseInt(token.getLexeme());
+                break;
+            }
+            case 42: {
+                dentroIndiceVetor = false;
+                indiceVetorProcessado = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                nomeVetorProcessado = nomeVetorAtual;
+                indiceNoAcumulador = (indiceVetorProcessado == null);
+
+                if (gerador != null && nomeVetorEsquerdo == null) {
+                    if (!indiceNoAcumulador) {
+                        if (indiceVetorProcessado.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + indiceVetorProcessado);
+                        } else {
+                            gerador.gerarText("LD " + indiceVetorProcessado);
+                        }
+                    }
+                    gerador.gerarText("STO " + GeradorCodigo.INDR);
+                    gerador.gerarText("LDV " + nomeVetorProcessado);
+                    String temp = gerador.getTemp();
+                    gerador.gerarText("STO " + temp);
+                    pilhaTempsVetor.push(temp);
+                    indiceVetorProcessado = null;
+                    nomeVetorProcessado = null;
+                    indiceNoAcumulador = false;
+                }
+                break;
+            }
+            case 43: {
+                operadorAtual = token.getLexeme();
+                if (pilhaTempsVetor.size() == 1 && !dentroIndiceVetor) {
+                    operadorPrincipal = token.getLexeme();
+                }
+                break;
+            }
+            case 44: {
+                if (gerador != null) {
+                    if (!pilhaTempsVetor.isEmpty()) {
+                        String temp = pilhaTempsVetor.pop();
+                        gerador.gerarText("LD " + temp);
+                        gerador.resetTemps();
+                        gerador.gerarText("STO $out_port");
+                    } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
+                        if (indiceVetorProcessado.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + indiceVetorProcessado);
+                        } else {
+                            gerador.gerarText("LD " + indiceVetorProcessado);
+                        }
+                        gerador.gerarText("STO " + GeradorCodigo.INDR);
+                        gerador.gerarText("LDV " + nomeVetorProcessado);
+                        gerador.gerarText("STO $out_port");
+                        indiceVetorProcessado = null;
+                        nomeVetorProcessado = null;
+                    } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
+                        gerador.gerarText("STO " + GeradorCodigo.INDR);
+                        gerador.gerarText("LDV " + nomeVetorProcessado);
+                        gerador.gerarText("STO $out_port");
+                        indiceNoAcumulador = false;
+                        nomeVetorProcessado = null;
+                    } else if (!pilhaValores.isEmpty()) {
+                        String valor = pilhaValores.pop();
+                        if (valor.matches("[+-]?\\d+")) {
+                            gerador.gerarText("LDI " + valor);
+                        } else {
+                            gerador.gerarText("LD " + valor);
+                        }
+                        gerador.gerarText("STO $out_port");
+                    } else {
+                        gerador.gerarText("STO $out_port");
+                    }
+                }
+                break;
+            }
+            case 45: {
+                operadorAtual = token.getLexeme();
+                break;
+            }
+            case 46: {
+                operadorAtual = token.getLexeme();
                 break;
             }
             default:
@@ -490,6 +873,11 @@ public class Semantico implements Constants {
         s.nivelEscopo = escopoAtual;
         s.inicializado = (categoria == Simbolo.Categoria.PARAMETRO || categoria == Simbolo.Categoria.ROTINA);
         s.usado = false;
+
+        if (categoria == Simbolo.Categoria.VETOR) {
+            s.tamanhoVetor = tamanhoVetorTemp;
+            tamanhoVetorTemp = 0;
+        }
         tabelaSimbolos.add(s);
     }
 
@@ -497,7 +885,7 @@ public class Semantico implements Constants {
     private Simbolo buscarSimbolo(String nome) {
         for (int i = tabelaSimbolos.size() - 1; i >= 0; i--) {
             Simbolo s = tabelaSimbolos.get(i);
-            if (s.nome.equals(nome) && pilhaEscopo.contains(s.nivelEscopo)) {
+            if (s.nome.equals(nome) && (pilhaEscopo.contains(s.nivelEscopo) || s.nivelEscopo == contadorEscopo + 1)) {
                 return s;
             }
         }

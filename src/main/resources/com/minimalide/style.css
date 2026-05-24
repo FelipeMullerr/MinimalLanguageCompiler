@@ -211,3 +211,15 @@
     -fx-background-color: #424242;
     -fx-background-radius: 2;
 }
+
+.asm-area {
+    -fx-background-color: #1f2223;
+    -fx-control-inner-background: #1f2223;
+    -fx-text-fill: #ce9178;
+    -fx-font-size: 13px;
+    -fx-border-color: transparent;
+}
+
+.asm-area .content {
+    -fx-background-color: #1f2223;
+}
