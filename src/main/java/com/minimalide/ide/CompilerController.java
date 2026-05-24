@@ -223,7 +223,7 @@ public class CompilerController {
             semantico.verificarNaoUsados();
 
             gerador.gerarData(semantico.getTabelaSimbolos());
-            //abrirTabelaSimbolos(semantico.getTabelaSimbolos());
+            abrirTabelaSimbolos(semantico.getTabelaSimbolos());
             abrirAssembly(gerador.getCodigo());
 
             if (semantico.getWarnings().isEmpty()) {
