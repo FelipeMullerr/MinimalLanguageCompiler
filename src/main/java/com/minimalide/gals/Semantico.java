@@ -221,12 +221,14 @@ public class Semantico implements Constants {
                         } else if (!pilhaTempsVetor.isEmpty()) {
                             // um vetor no lado direito
                             String temp = pilhaTempsVetor.pop();
+                            gerador.gerarText("STO" + temp);
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + temp);
                             gerador.gerarText("STOV " + nomeDestino);
                             gerador.resetTemps();
                         } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
+                            // vetor dois dois lados (um apenas), porem o indice nao foi processado no case 42
                             if (indiceVetorProcessado.matches("[+-]?\\d+")) {
                                 gerador.gerarText("LDI " + indiceVetorProcessado);
                             } else {
@@ -243,6 +245,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("STOV " + nomeDestino);
                             gerador.resetTemps();
                         } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
+                            // vetor com indice que esta no acumulador (ja calculado)
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LDV " + nomeVetorProcessado);
                             indiceNoAcumulador = false;
@@ -286,10 +289,12 @@ public class Semantico implements Constants {
                     } else if (!pilhaTempsVetor.isEmpty()) {
                         // destino variavel, um vetor no lado direito
                         String temp = pilhaTempsVetor.pop();
-                        gerador.gerarText("LD " + temp);
+                        //gerador.gerarText("LD " + temp);
                         gerador.gerarText("STO " + nomeDestino);
                         gerador.resetTemps();
+                        operadorPrincipal = null;
                     } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
+                        // destino variavel, um vetor lado direito e indice nao esta no acc
                         if (indiceVetorProcessado.matches("[+-]?\\d+")) {
                             gerador.gerarText("LDI " + indiceVetorProcessado);
                         } else {
@@ -301,6 +306,7 @@ public class Semantico implements Constants {
                         indiceVetorProcessado = null;
                         nomeVetorProcessado = null;
                     } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
+                        // destino variavel, um vetor lado direito com indice no acc
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
                         gerador.gerarText("LDV " + nomeVetorProcessado);
                         gerador.gerarText("STO " + nomeDestino);
@@ -308,6 +314,7 @@ public class Semantico implements Constants {
                         nomeVetorProcessado = null;
                     } else {
                         if (pilhaValores.isEmpty()) {
+                            // destino variavel e lado direito variavel
                             gerador.gerarText("STO " + nomeDestino);
                         } else {
                             String valor = pilhaValores.pop();
@@ -589,7 +596,7 @@ public class Semantico implements Constants {
                     Simbolo s = buscarSimbolo(nome);
                     if (s != null) {
                         s.inicializado = true;
-                        s.usado = true;
+                        //s.usado = true;
                     }
                 }
                 nomesUsoExpressao.clear();
@@ -760,12 +767,16 @@ public class Semantico implements Constants {
                 break;
             }
             case 42: {
+                // indice do vetor foi calculado e é salvo os valores dos vetores nos temporarios (1000 e 1001)
+                // dps de resolvido o indice, ele armazena no $indr, da load no vetor e salva no temporario
                 dentroIndiceVetor = false;
                 indiceVetorProcessado = pilhaValores.isEmpty() ? null : pilhaValores.pop();
                 nomeVetorProcessado = nomeVetorAtual;
                 indiceNoAcumulador = (indiceVetorProcessado == null);
 
                 if (gerador != null && nomeVetorEsquerdo == null) {
+                    // se indice esta na pilha, gera o LDI ou LD para o indice, caso nao
+                    // apenas gera o STO $indr pois o indice ja ta no acc
                     if (!indiceNoAcumulador) {
                         if (indiceVetorProcessado.matches("[+-]?\\d+")) {
                             gerador.gerarText("LDI " + indiceVetorProcessado);
