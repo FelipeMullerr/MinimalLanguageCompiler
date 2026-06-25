@@ -83,7 +83,6 @@ public class GeradorCodigo {
         }
     }
 
-    // geração de instruções (respeita o buffer do for)
     public void gerarText(String instrucao) {
         String linha = "    " + instrucao;
         if (bufferingPostOp)  {
