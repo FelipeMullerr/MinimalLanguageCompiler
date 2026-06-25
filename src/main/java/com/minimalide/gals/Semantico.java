@@ -431,6 +431,21 @@ public class Semantico implements Constants {
                 String tipoOp2 = pilhaTipos.pop();
                 String tipoOp1 = pilhaTipos.pop();
                 pilhaTipos.push(verificarTipoExpressao(tipoOp1, tipoOp2, TabelaSemantica.REL, token));
+
+                if (gerador != null) {
+                    if (!pilhaTempsVetor.isEmpty()) {
+                        pilhaTempsVetor.pop();
+                    } else {
+                        String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                        if (op2 != null) {
+                            if (op2.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op2);
+                            else                          gerador.gerarText("LD "  + op2);
+                        }
+                    }
+                    gerador.gerarText("STO " + GeradorCodigo.TEMP_OP2);
+                    gerador.gerarText("LD "  + GeradorCodigo.TEMP_OP1);
+                    gerador.gerarText("SUB " + GeradorCodigo.TEMP_OP2);
+                }
                 break;
             }
             // verifica se os dois operandos do && sao bool e empilha bool
@@ -492,20 +507,7 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores bit a bit requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
-
-                if(gerador != null) {
-                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    if (op1 != null) {
-                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
-                        else gerador.gerarText("LD " + op1);
-                    }
-                    if (op2 != null) {
-                        boolean literal = op2.matches("[+-]?\\d+");
-                        gerador.gerarText(literal ? "ORI " + op2 : "OR " + op2);
-                    }
-                    operadorAtual = null;
-                }
+                operadorAtual = null;
                 break;
             }
             // verifica se os dois operandos do shifts sao int e empilha int
@@ -516,22 +518,7 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores de shift requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
-                if (gerador != null) {
-                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    if (op1 != null) {
-                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
-                        else gerador.gerarText("LD " + op1);
-                    }
-                    if (op2 != null) {
-                        if ("<<".equals(operadorAtual)) {
-                            gerador.gerarText("SLL " + op2);
-                        } else {
-                            gerador.gerarText("SRL " + op2);
-                        }
-                    }
-                    operadorAtual = null;
-                }
+                operadorAtual = null;
                 break;
             }
             // verifica se o operando do NOT bit a bit e int e empilha int
@@ -612,20 +599,7 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores bit a bit requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
-
-                if (gerador != null) {
-                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    if (op1 != null) {
-                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
-                        else gerador.gerarText("LD " + op1);
-                    }
-                    if (op2 != null) {
-                        boolean literal = op2.matches("[+-]?\\d+");
-                        gerador.gerarText(literal ? "XORI " + op2 : "XOR " + op2);
-                    }
-                    operadorAtual = null;
-                }
+                operadorAtual = null;
                 break;
             }
             // operacao AND bit a bit, os dois lados tem que ser int
@@ -636,19 +610,7 @@ public class Semantico implements Constants {
                     throw new SemanticError("Operadores bit a bit requerem operandos int, encontrado: " + tipoOp1 + " e " + tipoOp2,token.getPosition());
                 }
                 pilhaTipos.push("int");
-                if (gerador != null) {
-                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    if (op1 != null) {
-                        if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
-                        else gerador.gerarText("LD " + op1);
-                    }
-                    if (op2 != null) {
-                        boolean literal = op2.matches("[+-]?\\d+");
-                        gerador.gerarText(literal ? "ANDI " + op2 : "AND " + op2);
-                    }
-                    operadorAtual = null;
-                }
+                operadorAtual = null;
                 break;
             }
             // processa todos os usos de uma expressao que nao é atribuicao, no caso ususo como if, while, out, return, etc
@@ -846,6 +808,186 @@ public class Semantico implements Constants {
             }
             case 46: {
                 operadorAtual = token.getLexeme();
+                break;
+            }
+            // #47 — antes do operador relacional: salva operando esquerdo em TEMP_OP1
+            case 47: {
+                if (gerador != null) {
+                    if (!pilhaTempsVetor.isEmpty()) {
+                        pilhaTempsVetor.pop(); // ACC já tem o valor do LDV (#42)
+                    } else {
+                        String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                        if (op1 != null) {
+                            if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
+                            else                          gerador.gerarText("LD "  + op1);
+                        }
+                        // se pilhaValores estava vazia, resultado de sub-expressão já está no ACC
+                    }
+                    gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
+                }
+                break;
+            }
+
+            // #48 — captura o operador relacional
+            case 48: {
+                if (gerador != null) gerador.setOprel(token.getLexeme());
+                break;
+            }
+
+            // #50 — após condição do if: gera branch invertido, empilha rótulo de saída
+            case 50: {
+                if (gerador != null) {
+                    String rotulo = gerador.newRotulo();
+                    gerador.pushRotulo(rotulo);
+                    gerador.gerarText(gerador.getBranchInverso() + " " + rotulo);
+                }
+                break;
+            }
+
+            // #51 — início do else: JMP para fim, emite rótulo do if
+            case 51: {
+                if (gerador != null) {
+                    String rotuloFim = gerador.newRotulo();
+                    String rotuloIf  = gerador.popRotulo();
+                    gerador.gerarText("JMP " + rotuloFim);
+                    gerador.emitirRotulo(rotuloIf);
+                    gerador.pushRotulo(rotuloFim);
+                }
+                break;
+            }
+
+            // #52 — fim do if (simples ou composto): emite rótulo de saída
+            case 52: {
+                if (gerador != null) gerador.emitirRotulo(gerador.popRotulo());
+                break;
+            }
+
+            // #53 — antes da condição do while: emite rótulo de início do loop
+            case 53: {
+                if (gerador != null) {
+                    String rotuloIni = gerador.newRotulo();
+                    gerador.pushRotulo(rotuloIni);
+                    gerador.emitirRotulo(rotuloIni);
+                }
+                break;
+            }
+
+            // #54 — após condição do while: gera branch para rótulo de fim
+            case 54: {
+                if (gerador != null) {
+                    String rotuloFim = gerador.newRotulo();
+                    gerador.pushRotulo(rotuloFim);
+                    gerador.gerarText(gerador.getBranchInverso() + " " + rotuloFim);
+                }
+                break;
+            }
+
+            // #55 — fim do bloco while: JMP ao início, emite rótulo de fim
+            case 55: {
+                if (gerador != null) {
+                    String rotuloFim = gerador.popRotulo();
+                    String rotuloIni = gerador.popRotulo();
+                    gerador.gerarText("JMP " + rotuloIni);
+                    gerador.emitirRotulo(rotuloFim);
+                }
+                break;
+            }
+
+            // #56 — início do do-while: emite rótulo de início
+            case 56: {
+                if (gerador != null) {
+                    String rotuloIni = gerador.newRotulo();
+                    gerador.pushRotulo(rotuloIni);
+                    gerador.emitirRotulo(rotuloIni);
+                }
+                break;
+            }
+
+            // #57 — após condição do do-while: branch DIRETO de volta ao início
+            case 57: {
+                if (gerador != null) {
+                    String rotuloIni = gerador.popRotulo();
+                    gerador.gerarText(gerador.getBranchDireto() + " " + rotuloIni);
+                }
+                break;
+            }
+
+            // #58 — após for_init (primeiro ';'): emite rótulo de início do loop
+            case 58: {
+                if (gerador != null) {
+                    String rotuloIni = gerador.newRotulo();
+                    gerador.pushRotulo(rotuloIni);
+                    gerador.emitirRotulo(rotuloIni);
+                }
+                break;
+            }
+
+            // #59 — após condição do for (segundo ';'): branch para fim + inicia buffer do pós-op
+            case 59: {
+                if (gerador != null) {
+                    String rotuloFim = gerador.newRotulo();
+                    gerador.pushRotulo(rotuloFim);
+                    gerador.gerarText(gerador.getBranchInverso() + " " + rotuloFim);
+                    gerador.startBufferPostOp();
+                }
+                break;
+            }
+
+            // #60 — após for_pos: para o buffer (pós-op fica salvo na pilha)
+            case 60: {
+                if (gerador != null) gerador.stopBufferPostOp();
+                break;
+            }
+
+            // #61 — fim do bloco for: drena pós-op, JMP ao início, emite rótulo de fim
+            case 61: {
+                if (gerador != null) {
+                    gerador.flushPostOp();
+                    String rotuloFim = gerador.popRotulo();
+                    String rotuloIni = gerador.popRotulo();
+                    gerador.gerarText("JMP " + rotuloIni);
+                    gerador.emitirRotulo(rotuloFim);
+                }
+                break;
+            }
+
+            // #62 — OP_INC no for_pos (i++)
+            case 62: {
+                String varName = nomeUltimaVariavel;
+                if (!pilhaValores.isEmpty())      pilhaValores.pop();
+                if (!pilhaTipos.isEmpty())        pilhaTipos.pop();
+                if (!nomesUsoExpressao.isEmpty()) {
+                    int idx = nomesUsoExpressao.lastIndexOf(varName);
+                    if (idx >= 0) {
+                        nomesUsoExpressao.remove(idx);
+                        posicoesUsoExpressao.remove(idx);
+                    }
+                }
+                if (gerador != null) {
+                    gerador.gerarText("LD "    + varName);
+                    gerador.gerarText("ADDI 1");
+                    gerador.gerarText("STO "   + varName);
+                }
+                break;
+            }
+
+            // #63 — OP_DEC no for_pos (i--)
+            case 63: {
+                String varName = nomeUltimaVariavel;
+                if (!pilhaValores.isEmpty())      pilhaValores.pop();
+                if (!pilhaTipos.isEmpty())        pilhaTipos.pop();
+                if (!nomesUsoExpressao.isEmpty()) {
+                    int idx = nomesUsoExpressao.lastIndexOf(varName);
+                    if (idx >= 0) {
+                        nomesUsoExpressao.remove(idx);
+                        posicoesUsoExpressao.remove(idx);
+                    }
+                }
+                if (gerador != null) {
+                    gerador.gerarText("LD "    + varName);
+                    gerador.gerarText("SUBI 1");
+                    gerador.gerarText("STO "   + varName);
+                }
                 break;
             }
             default:
