@@ -206,6 +206,7 @@ public class Semantico implements Constants {
                             // dois vetores com operacao entre eles
                             String temp2 = pilhaTempsVetor.pop();
                             String temp1 = pilhaTempsVetor.pop();
+                            gerador.gerarText("STO " + temp2);
                             gerador.gerarText("LD " + temp1);
                             if ("-".equals(operadorPrincipal)) {
                                 gerador.gerarText("SUB " + temp2);
@@ -222,7 +223,7 @@ public class Semantico implements Constants {
                         } else if (!pilhaTempsVetor.isEmpty()) {
                             // um vetor no lado direito
                             String temp = pilhaTempsVetor.pop();
-                            gerador.gerarText("STO" + temp);
+                            gerador.gerarText("STO " + temp);
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + temp);
@@ -278,6 +279,7 @@ public class Semantico implements Constants {
                         // destino variavel, dois vetores com operacao
                         String temp2 = pilhaTempsVetor.pop();
                         String temp1 = pilhaTempsVetor.pop();
+                        gerador.gerarText("STO " + temp2);
                         gerador.gerarText("LD " + temp1);
                         if ("-".equals(operadorPrincipal)) {
                             gerador.gerarText("SUB " + temp2);
@@ -394,22 +396,25 @@ public class Semantico implements Constants {
                 pilhaTipos.push(verificarTipoExpressao(tipoOp1, tipoOp2, TabelaSemantica.SUM, token));
 
                 if (gerador != null) {
-                    String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-                    String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
-
-                    if (op1 != null) {
-                        if (op1.matches("[+-]?\\d+")) {
-                            gerador.gerarText("LDI " + op1);
-                        } else {
-                            gerador.gerarText("LD " + op1);
+                    if (!pilhaTempsVetor.isEmpty()) {
+                        pilhaTempsVetor.pop(); // ACC já tem v[i] do LDV
+                        String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                        if (op2 != null) {
+                            boolean literal = op2.matches("[+-]?\\d+");
+                            if ("+".equals(operadorAtual)) gerador.gerarText(literal ? "ADDI " + op2 : "ADD " + op2);
+                            else gerador.gerarText(literal ? "SUBI " + op2 : "SUB " + op2);
                         }
-                    }
-                    if (op2 != null) {
-                        boolean literal = op2.matches("[+-]?\\d+");
-                        if ("+".equals(operadorAtual)) {
-                            gerador.gerarText(literal ? "ADDI " + op2 : "ADD " + op2);
-                        } else {
-                            gerador.gerarText(literal ? "SUBI " + op2 : "SUB " + op2);
+                    } else {
+                        String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                        String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
+                        if (op1 != null) {
+                            if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
+                            else gerador.gerarText("LD " + op1);
+                        }
+                        if (op2 != null) {
+                            boolean literal = op2.matches("[+-]?\\d+");
+                            if ("+".equals(operadorAtual)) gerador.gerarText(literal ? "ADDI " + op2 : "ADD " + op2);
+                            else gerador.gerarText(literal ? "SUBI " + op2 : "SUB " + op2);
                         }
                     }
                     operadorAtual = null;
@@ -438,8 +443,8 @@ public class Semantico implements Constants {
                             if (op2.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op2);
                             else                          gerador.gerarText("LD "  + op2);
                         }
-                        gerador.gerarText("STO " + GeradorCodigo.TEMP_OP2);
                     }
+                    gerador.gerarText("STO " + GeradorCodigo.TEMP_OP2);
                     gerador.gerarText("LD "  + GeradorCodigo.TEMP_OP1);
                     gerador.gerarText("SUB " + GeradorCodigo.TEMP_OP2);
                 }
@@ -737,6 +742,9 @@ public class Semantico implements Constants {
                 indiceNoAcumulador = (indiceVetorProcessado == null);
 
                 if (gerador != null && nomeVetorEsquerdo == null && !dentroIn) {
+                    if (!pilhaTempsVetor.isEmpty()) {
+                        gerador.gerarText("STO " + pilhaTempsVetor.peek());
+                    }
                     // se indice esta na pilha, gera o LDI ou LD para o indice, caso nao
                     // apenas gera o STO $indr pois o indice ja ta no acc
                     if (!indiceNoAcumulador) {
@@ -749,7 +757,7 @@ public class Semantico implements Constants {
                     gerador.gerarText("STO " + GeradorCodigo.INDR);
                     gerador.gerarText("LDV " + nomeVetorProcessado);
                     String temp = gerador.getTemp();
-                    gerador.gerarText("STO " + temp);
+                    //gerador.gerarText("STO " + temp);
                     pilhaTempsVetor.push(temp);
                     indiceVetorProcessado = null;
                     nomeVetorProcessado = null;
@@ -768,7 +776,7 @@ public class Semantico implements Constants {
                 if (gerador != null) {
                     if (!pilhaTempsVetor.isEmpty()) {
                         String temp = pilhaTempsVetor.pop();
-                        gerador.gerarText("LD " + temp);
+                        //gerador.gerarText("LD " + temp);
                         gerador.resetTemps();
                         gerador.gerarText("STO $out_port");
                     } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
@@ -821,9 +829,9 @@ public class Semantico implements Constants {
                             if (op1.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op1);
                             else                          gerador.gerarText("LD "  + op1);
                         }
-                        // se pilhaValores estava vazia, resultado de sub-expressão já está no ACC
-                        gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
                     }
+                    // se pilhaValores estava vazia, resultado de sub-expressão já está no ACC
+                    gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
                 }
                 break;
             }
