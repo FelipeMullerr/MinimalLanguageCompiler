@@ -24,6 +24,7 @@ public class Semantico implements Constants {
     private boolean indiceNoAcumulador = false;
     private String nomeVetorAtual = null;
     private boolean dentroIndiceVetor = false;
+    private boolean dentroIn = false;
 
     private GeradorCodigo gerador;
     public void setGerador(GeradorCodigo g) { this.gerador = g; }
@@ -344,11 +345,7 @@ public class Semantico implements Constants {
             // verifica o uso de um vetor com indice em expressao e empilha o tipo dele
             case 11: {
                 dentroIndiceVetor = true;
-                if (nomeVariavelAtribuicao == null) {
-                    nomeVetorEsquerdo = token.getLexeme();
-                } else {
-                    nomeVetorEsquerdo = null;
-                }
+                nomeVetorEsquerdo = null;
                 nomeUltimaVariavel = token.getLexeme();
                 nomeVetorAtual = token.getLexeme();
                 Simbolo s = verificarDeclaracao(nomeUltimaVariavel, token.getPosition());
@@ -441,8 +438,8 @@ public class Semantico implements Constants {
                             if (op2.matches("[+-]?\\d+")) gerador.gerarText("LDI " + op2);
                             else                          gerador.gerarText("LD "  + op2);
                         }
+                        gerador.gerarText("STO " + GeradorCodigo.TEMP_OP2);
                     }
-                    gerador.gerarText("STO " + GeradorCodigo.TEMP_OP2);
                     gerador.gerarText("LD "  + GeradorCodigo.TEMP_OP1);
                     gerador.gerarText("SUB " + GeradorCodigo.TEMP_OP2);
                 }
@@ -541,6 +538,7 @@ public class Semantico implements Constants {
             }
             // entrou no in, limpa a lista pra coletar as variaveis
             case 31: {
+                dentroIn = true;
                 nomesUsoExpressao.clear();
                 posicoesUsoExpressao.clear();
                 pilhaValores.clear();
@@ -589,6 +587,8 @@ public class Semantico implements Constants {
                 nomesUsoExpressao.clear();
                 posicoesUsoExpressao.clear();
                 pilhaValores.clear();
+                pilhaTempsVetor.clear();
+                dentroIn = false;
                 break;
             }
             // verifica se os dois operandos do XOR bit a bit sao int e empilha int
@@ -736,7 +736,7 @@ public class Semantico implements Constants {
                 nomeVetorProcessado = nomeVetorAtual;
                 indiceNoAcumulador = (indiceVetorProcessado == null);
 
-                if (gerador != null && nomeVetorEsquerdo == null) {
+                if (gerador != null && nomeVetorEsquerdo == null && !dentroIn) {
                     // se indice esta na pilha, gera o LDI ou LD para o indice, caso nao
                     // apenas gera o STO $indr pois o indice ja ta no acc
                     if (!indiceNoAcumulador) {
@@ -822,8 +822,8 @@ public class Semantico implements Constants {
                             else                          gerador.gerarText("LD "  + op1);
                         }
                         // se pilhaValores estava vazia, resultado de sub-expressão já está no ACC
+                        gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
                     }
-                    gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
                 }
                 break;
             }
@@ -988,6 +988,17 @@ public class Semantico implements Constants {
                     gerador.gerarText("SUBI 1");
                     gerador.gerarText("STO "   + varName);
                 }
+                break;
+            }
+            case 64: {
+                dentroIndiceVetor = true;
+                nomeVetorEsquerdo = token.getLexeme();
+                nomeUltimaVariavel = token.getLexeme();
+                nomeVetorAtual = token.getLexeme();
+                Simbolo s = verificarDeclaracao(nomeUltimaVariavel, token.getPosition());
+                nomesUsoExpressao.add(token.getLexeme());
+                posicoesUsoExpressao.add(token.getPosition());
+                pilhaTipos.push(s.tipo);
                 break;
             }
             default:
