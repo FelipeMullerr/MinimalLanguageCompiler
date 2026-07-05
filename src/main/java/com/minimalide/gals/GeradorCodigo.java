@@ -22,15 +22,15 @@ public class GeradorCodigo {
     public void freeTemp(String temp) { proximoTemp = 0; }
     public void resetTemps()          { proximoTemp = 0; }
 
-    // rótulos de desvio
     private int contadorRotulo = 0;
     private final Stack<String> pilhaRotulos = new Stack<>();
 
     public String newRotulo()          { return "R" + (contadorRotulo++); }
     public void   pushRotulo(String r) { pilhaRotulos.push(r); }
     public String popRotulo()          { return pilhaRotulos.isEmpty() ? "R?" : pilhaRotulos.pop(); }
+    private String rotuloMain = null;
+    public void setRotuloMain(String label) { this.rotuloMain = label; }
 
-    // operador relacional atual
     private String oprelAtual = null;
     public void   setOprel(String op) { this.oprelAtual = op; }
     public String getOprel()          { return oprelAtual; }
@@ -44,7 +44,7 @@ public class GeradorCodigo {
             case ">=" -> "BLT";
             case "<=" -> "BGT";
             case "==" -> "BNE";
-            case "!=" -> "BOE";
+            case "!=" -> "BEQ";
             default   -> "BGE";
         };
     }
@@ -57,7 +57,7 @@ public class GeradorCodigo {
             case "<"  -> "BLT";
             case ">=" -> "BGE";
             case "<=" -> "BLE";
-            case "==" -> "BOE";
+            case "==" -> "BEQ";
             case "!=" -> "BNE";
             default   -> "BLT";
         };
@@ -107,16 +107,16 @@ public class GeradorCodigo {
         secaoData.clear();
         secaoData.add(".data");
         for (Simbolo s : tabela) {
-            if (s.nivelEscopo == 0 && s.categoria != Simbolo.Categoria.ROTINA) {
+            if (s.categoria != Simbolo.Categoria.ROTINA) { // && s.nivelEscopo == 0
                 if (s.categoria == Simbolo.Categoria.VETOR) {
                     StringBuilder v = new StringBuilder();
                     for (int i = 0; i < s.tamanhoVetor; i++) {
                         v.append("0");
                         if (i < s.tamanhoVetor - 1) v.append(",");
                     }
-                    secaoData.add("    " + s.nome + ": " + v);
+                    secaoData.add("    " + s.nomeMangled + ": " + v);
                 } else {
-                    secaoData.add("    " + s.nome + ": 0");
+                    secaoData.add("    " + s.nomeMangled + ": 0");
                 }
             }
         }
@@ -126,6 +126,7 @@ public class GeradorCodigo {
         StringBuilder sb = new StringBuilder();
         for (String linha : secaoData) sb.append(linha).append("\n");
         sb.append(".text\n");
+        if(rotuloMain != null) sb.append("J    ").append(rotuloMain).append("\n");
         for (String linha : secaoText) sb.append(linha).append("\n");
         return sb.toString();
     }

@@ -25,6 +25,8 @@ public class Semantico implements Constants {
     private String nomeVetorAtual = null;
     private boolean dentroIndiceVetor = false;
     private boolean dentroIn = false;
+    private boolean dentroReturn = false;
+    private boolean retornoGerado = false;
 
     private GeradorCodigo gerador;
     public void setGerador(GeradorCodigo g) { this.gerador = g; }
@@ -199,6 +201,7 @@ public class Semantico implements Constants {
 
                 if (gerador != null && nomeDestino != null) {
                     Simbolo simDestino = buscarSimbolo(nomeDestino);
+                    String nomeDestinoM = (simDestino != null) ? simDestino.nomeMangled : nomeDestino;
                     boolean destinoEhVetor = simDestino != null && simDestino.categoria == Simbolo.Categoria.VETOR;
 
                     if (destinoEhVetor) {
@@ -217,7 +220,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
-                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.gerarText("STOV " + nomeDestinoM);
                             gerador.resetTemps();
                             operadorPrincipal = null;
                         } else if (!pilhaTempsVetor.isEmpty()) {
@@ -227,7 +230,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + temp);
-                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.gerarText("STOV " + nomeDestinoM);
                             gerador.resetTemps();
                         } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
                             // vetor dois dois lados (um apenas), porem o indice nao foi processado no case 42
@@ -244,7 +247,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
-                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.gerarText("STOV " + nomeDestinoM);
                             gerador.resetTemps();
                         } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
                             // vetor com indice que esta no acumulador (ja calculado)
@@ -256,7 +259,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
-                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.gerarText("STOV " + nomeDestinoM);
                             gerador.resetTemps();
                         } else {
                             // lado direito expressao simples ou aritmetica sem vetor
@@ -272,7 +275,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_ATRIB);
                             gerador.gerarText("STO " + GeradorCodigo.INDR);
                             gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
-                            gerador.gerarText("STOV " + nomeDestino);
+                            gerador.gerarText("STOV " + nomeDestinoM);
                             gerador.resetTemps();
                         }
                     } else if (pilhaTempsVetor.size() >= 2) {
@@ -286,14 +289,14 @@ public class Semantico implements Constants {
                         } else {
                             gerador.gerarText("ADD " + temp2);
                         }
-                        gerador.gerarText("STO " + nomeDestino);
+                        gerador.gerarText("STO " + nomeDestinoM);
                         gerador.resetTemps();
                         operadorPrincipal = null;
                     } else if (!pilhaTempsVetor.isEmpty()) {
                         // destino variavel, um vetor no lado direito
                         String temp = pilhaTempsVetor.pop();
                         //gerador.gerarText("LD " + temp);
-                        gerador.gerarText("STO " + nomeDestino);
+                        gerador.gerarText("STO " + nomeDestinoM);
                         gerador.resetTemps();
                         operadorPrincipal = null;
                     } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
@@ -305,20 +308,20 @@ public class Semantico implements Constants {
                         }
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
                         gerador.gerarText("LDV " + nomeVetorProcessado);
-                        gerador.gerarText("STO " + nomeDestino);
+                        gerador.gerarText("STO " + nomeDestinoM);
                         indiceVetorProcessado = null;
                         nomeVetorProcessado = null;
                     } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
                         // destino variavel, um vetor lado direito com indice no acc
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
                         gerador.gerarText("LDV " + nomeVetorProcessado);
-                        gerador.gerarText("STO " + nomeDestino);
+                        gerador.gerarText("STO " + nomeDestinoM);
                         indiceNoAcumulador = false;
                         nomeVetorProcessado = null;
                     } else {
                         if (pilhaValores.isEmpty()) {
                             // destino variavel e lado direito variavel
-                            gerador.gerarText("STO " + nomeDestino);
+                            gerador.gerarText("STO " + nomeDestinoM);
                         } else {
                             String valor = pilhaValores.pop();
                             if (valor.matches("[+-]?\\d+")) {
@@ -326,7 +329,7 @@ public class Semantico implements Constants {
                             } else {
                                 gerador.gerarText("LD " + valor);
                             }
-                            gerador.gerarText("STO " + nomeDestino);
+                            gerador.gerarText("STO " + nomeDestinoM);
                         }
                     }
                 }
@@ -341,7 +344,7 @@ public class Semantico implements Constants {
                 nomesUsoExpressao.add(token.getLexeme());
                 posicoesUsoExpressao.add(token.getPosition());
                 pilhaTipos.push(s.tipo);
-                pilhaValores.push(token.getLexeme());
+                pilhaValores.push(s.nomeMangled);
                 break;
             }
             // verifica o uso de um vetor com indice em expressao e empilha o tipo dele
@@ -562,7 +565,7 @@ public class Semantico implements Constants {
                         }
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
                         gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
-                        gerador.gerarText("STOV " + nomeVetorAtual);
+                        gerador.gerarText("STOV " + mangled(nomeVetorAtual));
                         indiceVetorProcessado = null;
                         nomeVetorProcessado = null;
                     } else if (indiceNoAcumulador && nomeVetorAtual != null) {
@@ -570,14 +573,14 @@ public class Semantico implements Constants {
                         gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
                         gerador.gerarText("LD " + GeradorCodigo.TEMP_OP1);
-                        gerador.gerarText("STOV " + nomeVetorAtual);
+                        gerador.gerarText("STOV " + mangled(nomeVetorAtual));
                         indiceNoAcumulador = false;
                     } else {
                         for (String nome : nomesUsoExpressao) {
                             Simbolo s = buscarSimbolo(nome);
                             if (s != null && s.categoria != Simbolo.Categoria.VETOR) {
                                 gerador.gerarText("LD $in_port");
-                                gerador.gerarText("STO " + nome);
+                                gerador.gerarText("STO " + s.nomeMangled);
                             }
                         }
                     }
@@ -637,6 +640,18 @@ public class Semantico implements Constants {
                 }
                 nomesUsoExpressao.clear();
                 posicoesUsoExpressao.clear();
+                if (gerador != null && dentroReturn) {
+                    if (!pilhaTempsVetor.isEmpty()) {
+                        pilhaTempsVetor.pop();
+                    } else if (!pilhaValores.isEmpty()) {
+                        String val = pilhaValores.pop();
+                        if (val.matches("[+-]?\\d+")) gerador.gerarText("LDI " + val);
+                        else                          gerador.gerarText("LD "  + val);
+                    }
+                    gerador.gerarText("RETURN 0");
+                    dentroReturn = false;
+                    retornoGerado = true;
+                }
                 break;
             }
             // abre novo escopo, empilha o novo nivel do escopo na pilha
@@ -678,6 +693,25 @@ public class Semantico implements Constants {
                                 throw new SemanticError("Parametro " + (i+1) + " da funcao '" + nomeFuncaoChamada +"' esperava " + tipoEsperado + " mas recebeu " + tipoRecebido + ".",token.getPosition());
                             }
                         }
+                        if ("void".equals(funcao.tipo) && !pilhaTipos.isEmpty()) {
+                            warnings.add("Aviso: funcao '" + nomeFuncaoChamada + "' retorna void e nao pode ser usada em expressao ou atribuicao.");
+                        }
+                    }
+                    if (gerador != null && funcao.rotuloFuncao != null && !funcao.rotuloFuncao.isEmpty()) {
+                        List<Simbolo> params = getParametrosFuncao(nomeFuncaoChamada);
+                        List<String> valores = new ArrayList<>();
+                        for (int i = 0; i < params.size(); i++) {
+                            if (!pilhaValores.isEmpty()) valores.add(0, pilhaValores.pop());
+                        }
+                        for (int i = 0; i < params.size(); i++) {
+                            String val = i < valores.size() ? valores.get(i) : null;
+                            if (val != null) {
+                                if (val.matches("[+-]?\\d+")) gerador.gerarText("LDI " + val);
+                                else                          gerador.gerarText("LD "  + val);
+                            }
+                            gerador.gerarText("STO " + params.get(i).nomeMangled);
+                        }
+                        gerador.gerarText("CALL " + funcao.rotuloFuncao);
                     }
                     nomeFuncaoChamada = null;
                     tiposArgsAtual.clear();
@@ -720,7 +754,7 @@ public class Semantico implements Constants {
                             } else {
                                 gerador.gerarText("LD " + valorExpressao);
                             }
-                            gerador.gerarText("STO " + s.nome);
+                            gerador.gerarText("STO " + s.nomeMangled);
                         }
                         s.inicializado = true;
                     }
@@ -755,7 +789,7 @@ public class Semantico implements Constants {
                         }
                     }
                     gerador.gerarText("STO " + GeradorCodigo.INDR);
-                    gerador.gerarText("LDV " + nomeVetorProcessado);
+                    gerador.gerarText("LDV " + mangled(nomeVetorProcessado));
                     String temp = gerador.getTemp();
                     //gerador.gerarText("STO " + temp);
                     pilhaTempsVetor.push(temp);
@@ -786,13 +820,13 @@ public class Semantico implements Constants {
                             gerador.gerarText("LD " + indiceVetorProcessado);
                         }
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
-                        gerador.gerarText("LDV " + nomeVetorProcessado);
+                        gerador.gerarText("LDV " + mangled(nomeVetorProcessado));
                         gerador.gerarText("STO $out_port");
                         indiceVetorProcessado = null;
                         nomeVetorProcessado = null;
                     } else if (indiceNoAcumulador && nomeVetorProcessado != null) {
                         gerador.gerarText("STO " + GeradorCodigo.INDR);
-                        gerador.gerarText("LDV " + nomeVetorProcessado);
+                        gerador.gerarText("LDV " + mangled(nomeVetorProcessado));
                         gerador.gerarText("STO $out_port");
                         indiceNoAcumulador = false;
                         nomeVetorProcessado = null;
@@ -818,11 +852,10 @@ public class Semantico implements Constants {
                 operadorAtual = token.getLexeme();
                 break;
             }
-            // #47 — antes do operador relacional: salva operando esquerdo em TEMP_OP1
             case 47: {
                 if (gerador != null) {
                     if (!pilhaTempsVetor.isEmpty()) {
-                        pilhaTempsVetor.pop(); // ACC já tem o valor do LDV (#42)
+                        pilhaTempsVetor.pop();
                     } else {
                         String op1 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
                         if (op1 != null) {
@@ -830,7 +863,7 @@ public class Semantico implements Constants {
                             else                          gerador.gerarText("LD "  + op1);
                         }
                     }
-                    // se pilhaValores estava vazia, resultado de sub-expressão já está no ACC
+                    // se pilhaValores estava vazia, resultado de sub-expr já está no ACC
                     gerador.gerarText("STO " + GeradorCodigo.TEMP_OP1);
                 }
                 break;
@@ -842,7 +875,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #50 — após condição do if: gera branch invertido, empilha rótulo de saída
+            // #50 — após condição do if, gera branch invertido, empilha rótulo de saída
             case 50: {
                 if (gerador != null) {
                     String rotulo = gerador.newRotulo();
@@ -852,7 +885,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #51 — início do else: JMP para fim, emite rótulo do if
+            // #51 — início do else, JMP para fim, emite rótulo do if
             case 51: {
                 if (gerador != null) {
                     String rotuloFim = gerador.newRotulo();
@@ -864,13 +897,13 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #52 — fim do if (simples ou composto): emite rótulo de saída
+            // #52 — fim do if, emite rótulo de saída
             case 52: {
                 if (gerador != null) gerador.emitirRotulo(gerador.popRotulo());
                 break;
             }
 
-            // #53 — antes da condição do while: emite rótulo de início do loop
+            // #53 — antes da condição do while, emite rótulo de início do loop
             case 53: {
                 if (gerador != null) {
                     String rotuloIni = gerador.newRotulo();
@@ -880,7 +913,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #54 — após condição do while: gera branch para rótulo de fim
+            // #54 — após condição do while, gera branch para rótulo de fim
             case 54: {
                 if (gerador != null) {
                     String rotuloFim = gerador.newRotulo();
@@ -890,7 +923,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #55 — fim do bloco while: JMP ao início, emite rótulo de fim
+            // #55 — fim do bloco while, JMP ao início, emite rótulo de fim
             case 55: {
                 if (gerador != null) {
                     String rotuloFim = gerador.popRotulo();
@@ -901,7 +934,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #56 — início do do-while: emite rótulo de início
+            // #56 — início do do-while, emite rótulo de início
             case 56: {
                 if (gerador != null) {
                     String rotuloIni = gerador.newRotulo();
@@ -911,7 +944,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #57 — após condição do do-while: branch DIRETO de volta ao início
+            // #57 — após condição do do-while, branch DIRETO de volta ao início
             case 57: {
                 if (gerador != null) {
                     String rotuloIni = gerador.popRotulo();
@@ -920,7 +953,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #58 — após for_init (primeiro ';'): emite rótulo de início do loop
+            // #58 — após for_init, emite rótulo de início do loop
             case 58: {
                 if (gerador != null) {
                     String rotuloIni = gerador.newRotulo();
@@ -930,7 +963,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #59 — após condição do for (segundo ';'): branch para fim + inicia buffer do pós-op
+            // #59 — após condição do for, branch para fim + inicia buffer do pós-op
             case 59: {
                 if (gerador != null) {
                     String rotuloFim = gerador.newRotulo();
@@ -941,13 +974,12 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #60 — após for_pos: para o buffer (pós-op fica salvo na pilha)
             case 60: {
                 if (gerador != null) gerador.stopBufferPostOp();
                 break;
             }
 
-            // #61 — fim do bloco for: drena pós-op, JMP ao início, emite rótulo de fim
+            // #61 — fim do bloco for,JMP ao início, emite rótulo de fim
             case 61: {
                 if (gerador != null) {
                     gerador.flushPostOp();
@@ -961,11 +993,11 @@ public class Semantico implements Constants {
 
             // #62 — OP_INC no for_pos (i++)
             case 62: {
-                String varName = nomeUltimaVariavel;
+                String varName = mangled(nomeUltimaVariavel);
                 if (!pilhaValores.isEmpty())      pilhaValores.pop();
                 if (!pilhaTipos.isEmpty())        pilhaTipos.pop();
                 if (!nomesUsoExpressao.isEmpty()) {
-                    int idx = nomesUsoExpressao.lastIndexOf(varName);
+                    int idx = nomesUsoExpressao.lastIndexOf(nomeUltimaVariavel);
                     if (idx >= 0) {
                         nomesUsoExpressao.remove(idx);
                         posicoesUsoExpressao.remove(idx);
@@ -981,7 +1013,7 @@ public class Semantico implements Constants {
 
             // #63 — OP_DEC no for_pos (i--)
             case 63: {
-                String varName = nomeUltimaVariavel;
+                String varName = mangled(nomeUltimaVariavel);
                 if (!pilhaValores.isEmpty())      pilhaValores.pop();
                 if (!pilhaTipos.isEmpty())        pilhaTipos.pop();
                 if (!nomesUsoExpressao.isEmpty()) {
@@ -1007,6 +1039,30 @@ public class Semantico implements Constants {
                 nomesUsoExpressao.add(token.getLexeme());
                 posicoesUsoExpressao.add(token.getPosition());
                 pilhaTipos.push(s.tipo);
+                break;
+            }
+            case 65: {
+                Simbolo funcao = buscarSimboloGlobal(nomeFuncaoAtual);
+                if (funcao != null) {
+                    String rotulo = nomeFuncaoAtual.toUpperCase() + (contadorEscopo + 1);
+                    funcao.rotuloFuncao = rotulo;
+                    funcao.nivelEscopoCorpo = contadorEscopo + 1;
+                    if (gerador != null) {
+                        if (nomeFuncaoAtual.equals("main")) gerador.setRotuloMain(rotulo);
+                        gerador.emitirRotulo(rotulo);
+                    }
+                }
+                break;
+            }
+            case 66: {
+                if (gerador != null && !retornoGerado)  {
+                    gerador.gerarText("RETURN 0");
+                }
+                retornoGerado = false;
+                break;
+            }
+            case 67: {
+                dentroReturn = true;
                 break;
             }
             default:
@@ -1051,6 +1107,7 @@ public class Semantico implements Constants {
             tamanhoVetorTemp = 0;
         }
         tabelaSimbolos.add(s);
+        s.nomeMangled = nome + "_" + escopoAtual;
     }
 
     // busca um simbolo pelo nome considerando apenas os escopos visiveis na pilha atual
@@ -1113,5 +1170,23 @@ public class Semantico implements Constants {
         } else if (resultado == TabelaSemantica.ERR) {
             throw new SemanticError("Atribuicao incompativel: variavel '" + nomeVariavelAtribuicao + "' e do tipo " + tipoVariavel + " mas recebe " + tipoExpressao, pos);
         }
+    }
+
+    private String mangled(String nome) {
+        Simbolo s = buscarSimbolo(nome);
+        return (s != null && s.nomeMangled != null && !s.nomeMangled.isEmpty()) ? s.nomeMangled : nome;
+    }
+
+    private List<Simbolo> getParametrosFuncao(String nomeFuncao) {
+        Simbolo funcao = buscarSimboloGlobal(nomeFuncao);
+        if (funcao == null) return new ArrayList<>();
+        List<Simbolo> params = new ArrayList<>();
+        for (Simbolo s : tabelaSimbolos) {
+            if (s.categoria == Simbolo.Categoria.PARAMETRO
+                    && s.nivelEscopo == funcao.nivelEscopoCorpo) {
+                params.add(s);
+            }
+        }
+        return params;
     }
 }

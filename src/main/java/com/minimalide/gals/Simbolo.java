@@ -19,6 +19,9 @@ public class Simbolo {
     public boolean usado;
     public boolean inicializado;
     public int tamanhoVetor;
+    public String nomeMangled = "";
+    public String rotuloFuncao = "";
+    public int nivelEscopoCorpo = 0;
 
     public Simbolo() {
         this.categoria = Categoria.VARIAVEL;
