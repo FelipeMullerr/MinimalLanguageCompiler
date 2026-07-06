@@ -63,7 +63,6 @@ public class GeradorCodigo {
         };
     }
 
-    // buffer do pós-operação do for
     private boolean bufferingPostOp = false;
     private final List<String> bufferPostOpAtual = new ArrayList<>();
     private final Stack<List<String>> pilhaPostOps = new Stack<>();

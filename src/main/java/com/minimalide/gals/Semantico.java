@@ -233,7 +233,7 @@ public class Semantico implements Constants {
                             gerador.gerarText("STOV " + nomeDestinoM);
                             gerador.resetTemps();
                         } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
-                            // vetor dois dois lados (um apenas), porem o indice nao foi processado no case 42
+                            // vetor dois dois lados (um apenas), porem o indice ainda nao foi processado no case 42
                             if (indiceVetorProcessado.matches("[+-]?\\d+")) {
                                 gerador.gerarText("LDI " + indiceVetorProcessado);
                             } else {
@@ -400,7 +400,7 @@ public class Semantico implements Constants {
 
                 if (gerador != null) {
                     if (!pilhaTempsVetor.isEmpty()) {
-                        pilhaTempsVetor.pop(); // ACC já tem v[i] do LDV
+                        pilhaTempsVetor.pop();
                         String op2 = pilhaValores.isEmpty() ? null : pilhaValores.pop();
                         if (op2 != null) {
                             boolean literal = op2.matches("[+-]?\\d+");
@@ -589,7 +589,6 @@ public class Semantico implements Constants {
                     Simbolo s = buscarSimbolo(nome);
                     if (s != null) {
                         s.inicializado = true;
-                        //s.usado = true;
                     }
                 }
                 nomesUsoExpressao.clear();
@@ -791,7 +790,6 @@ public class Semantico implements Constants {
                     gerador.gerarText("STO " + GeradorCodigo.INDR);
                     gerador.gerarText("LDV " + mangled(nomeVetorProcessado));
                     String temp = gerador.getTemp();
-                    //gerador.gerarText("STO " + temp);
                     pilhaTempsVetor.push(temp);
                     indiceVetorProcessado = null;
                     nomeVetorProcessado = null;
@@ -810,7 +808,6 @@ public class Semantico implements Constants {
                 if (gerador != null) {
                     if (!pilhaTempsVetor.isEmpty()) {
                         String temp = pilhaTempsVetor.pop();
-                        //gerador.gerarText("LD " + temp);
                         gerador.resetTemps();
                         gerador.gerarText("STO $out_port");
                     } else if (indiceVetorProcessado != null && nomeVetorProcessado != null) {
@@ -875,7 +872,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #50 — após condição do if, gera branch invertido, empilha rótulo de saída
+            // #50 — após condicao do if, gera branch invertido, empilha rótulo de saída
             case 50: {
                 if (gerador != null) {
                     String rotulo = gerador.newRotulo();
@@ -885,7 +882,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #51 — início do else, JMP para fim, emite rótulo do if
+            // #51 — inicio do else, JMP para fim, emite rótulo do if
             case 51: {
                 if (gerador != null) {
                     String rotuloFim = gerador.newRotulo();
@@ -963,7 +960,7 @@ public class Semantico implements Constants {
                 break;
             }
 
-            // #59 — após condição do for, branch para fim + inicia buffer do pós-op
+            // #59 — após condição do for, branch para fim
             case 59: {
                 if (gerador != null) {
                     String rotuloFim = gerador.newRotulo();
