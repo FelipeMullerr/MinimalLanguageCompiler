@@ -248,10 +248,6 @@ fn media(a : float, b : float) : float {
     ret (a + b) / 2;
 }
 
-fn ePositivo(x : int) : bool {
-    ret x > 0;
-}
-
 let x : float = 8.0;
 let y : float = 6.0;
 let resultado : float;
@@ -262,7 +258,6 @@ resultado = media(x, y);
 out(resultado);
 
 in(n);
-positivo = ePositivo(n);
 
 let soma : int = 0;
 for(let i : int = 1; i <= 5; i++) {
