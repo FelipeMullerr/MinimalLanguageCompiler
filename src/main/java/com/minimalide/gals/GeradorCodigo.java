@@ -125,7 +125,7 @@ public class GeradorCodigo {
         StringBuilder sb = new StringBuilder();
         for (String linha : secaoData) sb.append(linha).append("\n");
         sb.append(".text\n");
-        if(rotuloMain != null) sb.append("J    ").append(rotuloMain).append("\n");
+        if(rotuloMain != null) sb.append("JMP    ").append(rotuloMain).append("\n");
         for (String linha : secaoText) sb.append(linha).append("\n");
         return sb.toString();
     }
